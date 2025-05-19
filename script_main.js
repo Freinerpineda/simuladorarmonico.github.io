@@ -77,7 +77,9 @@ let datosGrafica = {
   tiempo: [],
   posicion: [],
   velocidad: [],
-  aceleracion: []
+  aceleracion: [],
+  energiaCinetica: [],
+  energiaPotencial: []
 };
 let chart = null;
 const maxPuntos = 200; // Máximo de puntos a mostrar
@@ -251,19 +253,27 @@ function animate(timestamp) {
   acceleration =
     -amplitudeMeters * omega * omega * Math.sin(omega * elapsedTime + phase);
 
+  // Calcular energías
+  let masaKg = parseFloat($masaInput.value) / 1000;
+  let energiaCinetica = 0.5 * masaKg * velocity * velocity;
+  let energiaPotencial = 0.5 * parseFloat($constResorte.value) * posxMeters * posxMeters;
+
   // Guardar datos para la gráfica
   if (isAnimating) {
-    if (datosGrafica.tiempo.length > maxPuntos) {
-      // Mantener el tamaño máximo
+    if (datosGrafica.tiempo.length > 500) { // Limita la cantidad de puntos
       datosGrafica.tiempo.shift();
       datosGrafica.posicion.shift();
       datosGrafica.velocidad.shift();
       datosGrafica.aceleracion.shift();
+      datosGrafica.energiaCinetica.shift();
+      datosGrafica.energiaPotencial.shift();
     }
     datosGrafica.tiempo.push(elapsedTime.toFixed(2));
     datosGrafica.posicion.push(posxMeters);
     datosGrafica.velocidad.push(velocity);
     datosGrafica.aceleracion.push(acceleration);
+    datosGrafica.energiaCinetica.push(energiaCinetica);
+    datosGrafica.energiaPotencial.push(energiaPotencial);
 
     // Actualizar la gráfica en tiempo real si hay una activa
     if (chart && tipoGraficaActiva) {
@@ -274,8 +284,14 @@ function animate(timestamp) {
         chart.data.datasets[0].data = datosGrafica.velocidad;
       } else if (tipoGraficaActiva === "aceleracion") {
         chart.data.datasets[0].data = datosGrafica.aceleracion;
+      } else if (tipoGraficaActiva === "energiaCinetica") {
+        chart.data.datasets[0].data = datosGrafica.energiaCinetica;
+      } else if (tipoGraficaActiva === "energiaPotencial") {
+        chart.data.datasets[0].data = datosGrafica.energiaPotencial;
       }
-      chart.update("none");
+      if (chart.data.datasets[0].data && chart.data.labels) {
+        chart.update("none");
+      }
     }
   }
 
@@ -539,9 +555,11 @@ $playBt.addEventListener("click", function () {
     timeSave = elapsedTime; // Guardar el tiempo transcurrido
     isAnimating = false;
     $playBt.textContent = "Continuar";
+    possibleDragging = true; // <-- Permitir volver a arrastrar al pausar
   } else {
     // Iniciar la animación desde el punto donde se detuvo
     isAnimating = true;
+    possibleDragging = false; // <-- No permitir arrastrar mientras anima
     startTime = performance.now() - timeSave * 1000; // Ajustar startTime al tiempo acumulado
     requestAnimationFrame(animate);
     $playBt.textContent = "Detener";
@@ -556,24 +574,24 @@ function resetSimulation() {
   restaurarEcua();
   $playBt.style.display = "none";
   // Reiniciar todas las variables
-  isDragging = false; // Detener el arrastre
-  isAnimating = false; // Detener la animación
-  startTime = null; // Reiniciar el tiempo de inicio
-  timeSave = 0; // Reiniciar el tiempo guardado
-  elapsedTime = 0; // Reiniciar el tiempo transcurrido
-  posx = 0; // Posición inicial
+  isDragging = false;
+  isAnimating = false;
+  startTime = null;
+  timeSave = 0;
+  elapsedTime = 0;
+  posx = 0;
   posxMeters = 0;
-  velocity = 0; // Velocidad inicial
-  acceleration = 0; // Aceleración inicial
-  amplitudeMeters = 0; // Reiniciar la amplitud en metros
-  amplitude = 0; // Reiniciar la amplitud en píxeles
-  phase = 0; // Reiniciar la fase
+  velocity = 0;
+  acceleration = 0;
+  amplitudeMeters = 0;
+  amplitude = 0;
+  phase = 0;
   possibleDragging = true;
 
   // Reiniciar entradas de usuario
-  $masaInput.value = 600; // Valor predeterminado para la masa
-  $constResorte.value = 50; // Valor predeterminado para la constante del resorte
-  $checkboxEquilibrio.checked = true; // Reiniciar el checkbox
+  $masaInput.value = 600;
+  $constResorte.value = 50;
+  $checkboxEquilibrio.checked = true;
   mostrarEquilibrio = true;
 
   // Recalcular amplitud máxima
@@ -587,10 +605,19 @@ function resetSimulation() {
   $vel.innerHTML = `v = 0.000 m/s`;
   $ace.innerHTML = `a = 0.000 m/s<sup>2</sup>`;
 
-  datosGrafica = { tiempo: [], posicion: [], velocidad: [], aceleracion: [] };
-  if (chart) chart.destroy();
-
-  // Mostrar el aviso de gráfica
+  // <-- Corrige aquí: incluye todas las propiedades
+  datosGrafica = {
+    tiempo: [],
+    posicion: [],
+    velocidad: [],
+    aceleracion: [],
+    energiaCinetica: [],
+    energiaPotencial: []
+  };
+  if (chart) {
+    chart.destroy();
+    chart = null; // <-- IMPORTANTE: así no se intenta actualizar una gráfica destruida
+  }
   if ($graficaAviso) $graficaAviso.style.display = "block";
 
   // Quitar selección de botones de gráfica
@@ -601,11 +628,17 @@ function resetSimulation() {
   dibujarEscena(); // Redibujar la escena para mostrar la posición inicial
 }
 
+// Listeners para los nuevos botones
+document.getElementById("btnGrafEc").addEventListener("click", () => mostrarGrafica("energiaCinetica"));
+document.getElementById("btnGrafEp").addEventListener("click", () => mostrarGrafica("energiaPotencial"));
 
-dibujarEscena();
+// ya existen estos:
+$btnGrafPos.addEventListener("click", () => mostrarGrafica("posicion"));
+$btnGrafVel.addEventListener("click", () => mostrarGrafica("velocidad"));
+$btnGrafAce.addEventListener("click", () => mostrarGrafica("aceleracion"));
 
 function mostrarGrafica(tipo) {
-  tipoGraficaActiva = tipo; // Guardar el tipo de gráfica activa
+  tipoGraficaActiva = tipo;
 
   // Quitar la clase activa de todos los botones
   document.querySelectorAll('.btn-grafica').forEach(btn => {
@@ -618,12 +651,15 @@ function mostrarGrafica(tipo) {
     $btnGrafVel.classList.add('btn-grafica-activa');
   } else if (tipo === "aceleracion") {
     $btnGrafAce.classList.add('btn-grafica-activa');
+  } else if (tipo === "energiaCinetica") {
+    document.getElementById("btnGrafEc").classList.add('btn-grafica-activa');
+  } else if (tipo === "energiaPotencial") {
+    document.getElementById("btnGrafEp").classList.add('btn-grafica-activa');
   }
 
   if (chart) chart.destroy();
   crearGrafica(tipo);
 
-  // Oculta el aviso cuando se muestra una gráfica
   if ($graficaAviso) $graficaAviso.style.display = "none";
 }
 
@@ -643,6 +679,14 @@ function crearGrafica(tipo) {
     label = "Aceleración (m/s²)";
     data = datosGrafica.aceleracion;
     color = "rgba(255, 99, 132, 0.7)";
+  } else if (tipo === "energiaCinetica") {
+    label = "Energía Cinética (J)";
+    data = datosGrafica.energiaCinetica;
+    color = "rgba(0, 200, 83, 0.7)";
+  } else if (tipo === "energiaPotencial") {
+    label = "Energía Potencial (J)";
+    data = datosGrafica.energiaPotencial;
+    color = "rgba(255, 140, 0, 0.7)";
   }
   chart = new Chart($canvasGrafica, {
     type: "line",
@@ -675,7 +719,4 @@ function crearGrafica(tipo) {
 // Mostrar el aviso al cargar la página y al reiniciar
 if ($graficaAviso) $graficaAviso.style.display = "block";
 if (chart) chart.destroy();
-
-$btnGrafPos.addEventListener("click", () => mostrarGrafica("posicion"));
-$btnGrafVel.addEventListener("click", () => mostrarGrafica("velocidad"));
-$btnGrafAce.addEventListener("click", () => mostrarGrafica("aceleracion"));
+dibujarEscena();
