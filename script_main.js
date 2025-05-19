@@ -72,6 +72,23 @@ let acceleration = 0; // Aceleración
 let isAnimating = false; // Estado de la animación
 let animationId = null; // ID de la animación para detenerla
 
+// Variables para gráficas
+let datosGrafica = {
+  tiempo: [],
+  posicion: [],
+  velocidad: [],
+  aceleracion: []
+};
+let chart = null;
+const maxPuntos = 200; // Máximo de puntos a mostrar
+
+// Referencias a botones y canvas de gráfica
+const $btnGrafPos = document.getElementById("btnGrafPos");
+const $btnGrafVel = document.getElementById("btnGrafVel");
+const $btnGrafAce = document.getElementById("btnGrafAce");
+const $canvasGrafica = document.getElementById("grafica");
+const $graficaAviso = document.querySelector(".grafica-aviso");
+
 // Evento para el checkbox de mostrar equilibrio
 $checkboxEquilibrio.addEventListener("change", function () {
   mostrarEquilibrio = this.checked;
@@ -232,6 +249,21 @@ function animate(timestamp) {
   // Calcular aceleración
   acceleration =
     -amplitudeMeters * omega * omega * Math.sin(omega * elapsedTime + phase);
+
+  // Guardar datos para la gráfica
+  if (isAnimating) {
+    if (datosGrafica.tiempo.length > maxPuntos) {
+      // Mantener el tamaño máximo
+      datosGrafica.tiempo.shift();
+      datosGrafica.posicion.shift();
+      datosGrafica.velocidad.shift();
+      datosGrafica.aceleracion.shift();
+    }
+    datosGrafica.tiempo.push(elapsedTime.toFixed(2));
+    datosGrafica.posicion.push(posxMeters);
+    datosGrafica.velocidad.push(velocity);
+    datosGrafica.aceleracion.push(acceleration);
+  }
 
   // Dibujar la escena
   dibujarEscena();
@@ -541,28 +573,88 @@ function resetSimulation() {
   $vel.innerHTML = `v = 0.000 m/s`;
   $ace.innerHTML = `a = 0.000 m/s<sup>2</sup>`;
 
+  datosGrafica = { tiempo: [], posicion: [], velocidad: [], aceleracion: [] };
+  if (chart) chart.destroy();
+
+  // Mostrar el aviso de gráfica
+  if ($graficaAviso) $graficaAviso.style.display = "block";
+
+  // Quitar selección de botones de gráfica
+  document.querySelectorAll('.btn-grafica').forEach(btn => {
+    btn.classList.remove('btn-grafica-activa');
+  });
+
   dibujarEscena(); // Redibujar la escena para mostrar la posición inicial
 }
 
-// Ajustar el tamaño del canvas para dispositivos con alta densidad de píxeles
-/*function resizeCanvasToDisplaySize(canvas) {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
 
-  const width = rect.width * dpr;
-  const height = rect.height * dpr;
+dibujarEscena();
 
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-    return true;
+function mostrarGrafica(tipo) {
+  // Quitar la clase activa de todos los botones
+  document.querySelectorAll('.btn-grafica').forEach(btn => {
+    btn.classList.remove('btn-grafica-activa');
+  });
+  // Agregar la clase activa al botón correspondiente
+  if (tipo === "posicion") {
+    $btnGrafPos.classList.add('btn-grafica-activa');
+  } else if (tipo === "velocidad") {
+    $btnGrafVel.classList.add('btn-grafica-activa');
+  } else if (tipo === "aceleracion") {
+    $btnGrafAce.classList.add('btn-grafica-activa');
   }
 
-  return false;
+  if (chart) chart.destroy();
+  let label = "";
+  let data = [];
+  let color = "";
+  if (tipo === "posicion") {
+    label = "Posición (m)";
+    data = datosGrafica.posicion;
+    color = "rgba(54, 162, 235, 0.7)";
+  } else if (tipo === "velocidad") {
+    label = "Velocidad (m/s)";
+    data = datosGrafica.velocidad;
+    color = "rgba(255, 206, 86, 0.7)";
+  } else if (tipo === "aceleracion") {
+    label = "Aceleración (m/s²)";
+    data = datosGrafica.aceleracion;
+    color = "rgba(255, 99, 132, 0.7)";
+  }
+  chart = new Chart($canvasGrafica, {
+    type: "line",
+    data: {
+      labels: datosGrafica.tiempo,
+      datasets: [{
+        label: label,
+        data: data,
+        borderColor: color,
+        backgroundColor: color,
+        fill: false,
+        pointRadius: 0,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      scales: {
+        x: { title: { display: true, text: "Tiempo (s)" } },
+        y: { title: { display: true, text: label } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+  // Oculta el aviso cuando se muestra una gráfica
+  if ($graficaAviso) $graficaAviso.style.display = "none";
+}
 
+// Mostrar el aviso al cargar la página y al reiniciar
+if ($graficaAviso) $graficaAviso.style.display = "block";
+if (chart) chart.destroy();
 
-// Llama a esta función al iniciar
-resizeCanvasToDisplaySize(canvas);}*/
-
-// Dibujar la escena inicial antes de iniciar la animación
-dibujarEscena();
+$btnGrafPos.addEventListener("click", () => mostrarGrafica("posicion"));
+$btnGrafVel.addEventListener("click", () => mostrarGrafica("velocidad"));
+$btnGrafAce.addEventListener("click", () => mostrarGrafica("aceleracion"));

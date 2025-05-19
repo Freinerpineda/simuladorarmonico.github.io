@@ -86,8 +86,21 @@
             <button type="button" id="btnPlay">Detener</button>
           </div>
         </aside>
+        <aside class="options opt-graficas">
+          <div class="grafica-btns">
+            <button class="btn-grafica" id="btnGrafPos">Posición</button>
+            <button class="btn-grafica" id="btnGrafVel">Velocidad</button>
+            <button class="btn-grafica" id="btnGrafAce">Aceleración</button>
+          </div>
+          <div class="grafica-aviso">
+            Usa los botones para ver la gráfica de posición, velocidad o aceleración.
+          </div>
+          <canvas id="grafica" width="260" height="140"></canvas>
+        </aside>
       </div>
     </div>
+    <!-- Agrega Chart.js antes de tu script principal -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script_main.js"></script>
   </body>
 </html>

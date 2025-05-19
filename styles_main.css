@@ -55,6 +55,7 @@ body {
   transform: scale(0.95);
 }
 .main_flex {
+  margin-top: 10px;
   display: flex;
   flex-direction: row;
   justify-content: space-evenly;
@@ -70,8 +71,10 @@ body {
 }
 .main_right {
   display: flex;
+  flex-direction: column;
   justify-content: space-evenly;
   align-items: center;
+  gap: 20px;
 }
 .options {
   background-color: #fff;
@@ -146,6 +149,11 @@ body {
   align-items: center;
   gap: 15px;
 }
+.opt-graficas{
+  padding: 20px;
+  width: 370px;
+  height: 270px;
+}
 @media screen and (max-width: 805px) {
   .central {
     flex-direction: column;
@@ -177,4 +185,71 @@ body {
   .equation_container {
     width: auto;
   }
+}
+
+/* Estilos para los botones de gráficas usando clases */
+.grafica-btns .btn-grafica {
+  padding: 8px 16px;
+  background-color: #0056b3;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 4px;
+  margin-right: 4px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+.grafica-btns .btn-grafica:last-child {
+  margin-right: 0;
+}
+.grafica-btns .btn-grafica:hover {
+  background-color: #004494;
+  transform: scale(1.05);
+}
+.grafica-btns .btn-grafica:active {
+  background-color: #003366;
+  transform: scale(0.95);
+}
+.grafica-aviso {
+  color: #333;
+  font-size: 15px;
+  text-align: center;
+  margin-top: 18px;
+  margin-bottom: 10px;
+  background: #f0f0f0;
+  border-radius: 6px;
+  padding: 8px 4px;
+  border: 1px dashed #0056b3;
+}
+
+.grafica-btns .btn-grafica.btn-grafica-activa {
+  background-color: #00b386;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 0 0 2px #00b38644;
+  transform: scale(1.08);
+}
+
+.grafica-btns{
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap; /* Permite que los botones bajen si no caben */
+  width: 100%;
+}
+
+.opt-graficas{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 10px 10px 10px 10px;
+  width: 300px; /* Ajusta el ancho para que no haya overflow */
+  min-width: 270px;
+  max-width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  overflow: hidden; /* Previene overflow visual */
 }
