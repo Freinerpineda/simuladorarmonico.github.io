@@ -88,6 +88,7 @@ const $btnGrafVel = document.getElementById("btnGrafVel");
 const $btnGrafAce = document.getElementById("btnGrafAce");
 const $canvasGrafica = document.getElementById("grafica");
 const $graficaAviso = document.querySelector(".grafica-aviso");
+let tipoGraficaActiva = null; // Nueva variable para saber qué gráfica mostrar
 
 // Evento para el checkbox de mostrar equilibrio
 $checkboxEquilibrio.addEventListener("change", function () {
@@ -263,6 +264,19 @@ function animate(timestamp) {
     datosGrafica.posicion.push(posxMeters);
     datosGrafica.velocidad.push(velocity);
     datosGrafica.aceleracion.push(acceleration);
+
+    // Actualizar la gráfica en tiempo real si hay una activa
+    if (chart && tipoGraficaActiva) {
+      chart.data.labels = datosGrafica.tiempo;
+      if (tipoGraficaActiva === "posicion") {
+        chart.data.datasets[0].data = datosGrafica.posicion;
+      } else if (tipoGraficaActiva === "velocidad") {
+        chart.data.datasets[0].data = datosGrafica.velocidad;
+      } else if (tipoGraficaActiva === "aceleracion") {
+        chart.data.datasets[0].data = datosGrafica.aceleracion;
+      }
+      chart.update("none");
+    }
   }
 
   // Dibujar la escena
@@ -591,6 +605,8 @@ function resetSimulation() {
 dibujarEscena();
 
 function mostrarGrafica(tipo) {
+  tipoGraficaActiva = tipo; // Guardar el tipo de gráfica activa
+
   // Quitar la clase activa de todos los botones
   document.querySelectorAll('.btn-grafica').forEach(btn => {
     btn.classList.remove('btn-grafica-activa');
@@ -605,6 +621,13 @@ function mostrarGrafica(tipo) {
   }
 
   if (chart) chart.destroy();
+  crearGrafica(tipo);
+
+  // Oculta el aviso cuando se muestra una gráfica
+  if ($graficaAviso) $graficaAviso.style.display = "none";
+}
+
+function crearGrafica(tipo) {
   let label = "";
   let data = [];
   let color = "";
@@ -647,8 +670,6 @@ function mostrarGrafica(tipo) {
       }
     }
   });
-  // Oculta el aviso cuando se muestra una gráfica
-  if ($graficaAviso) $graficaAviso.style.display = "none";
 }
 
 // Mostrar el aviso al cargar la página y al reiniciar
