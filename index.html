@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador MAS</title>
+    <link rel="stylesheet" href="styles_main.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://kit.fontawesome.com/e186f730ef.js"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div class="main_flex">
+      <div class="main_left">
+        <header class="title">
+          <h1>Universidad Tecnológica de Bolívar</h1>
+        </header>
+        <main class="central">
+          <div class="variales">
+            <div id="pos" class="itemvar">x = 0 m</div>
+            <div id="vel" class="itemvar">v = 0 m/s</div>
+            <div id="ace" class="itemvar">a = 0 m/s<sup>2</sup></div>
+          </div>
+          <canvas class="scene" width="600" height="440" id="canvas"></canvas>
+        </main>
+        <div class="equation_container">
+          <div class="equation" id="eqPos">
+            x(t) = Asen(&omega;t + &phi;) [m]
+          </div>
+          <div class="equation" id="eqVelo">
+            v(t) = A&omega;cos(&omega;t + &phi;) [m/s]
+          </div>
+          <div class="equation" id="eqAce">
+            a(t) = -A&omega;<sup>2</sup>sen(&omega;t + &phi;) [m/s<sup>2</sup>]
+          </div>
+        </div>
+      </div>
+      <div class="main_right">
+        <aside class="options">
+          <div class="form">
+            <div class="label_first">
+              <label>
+                Constante del Resorte [N/m]:
+                <input
+                  type="number"
+                  name="const"
+                  id="resorte_const"
+                  min="5"
+                  max="2500"
+                  step="5"
+                  placeholder="Introduce la constante del resorte [N/m]"
+                />
+              </label>
+              <label>
+                Masa [g]:
+                <input
+                  type="number"
+                  name="masaObj"
+                  id="masa"
+                  min="0.2"
+                  max="600"
+                  step="5"
+                  placeholder="Introduce la masa en [g]"
+                />
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  name="visu_equilibri"
+                  id="ver_equilibrio"
+                  checked
+                />
+                Mostrar Equilibrio
+              </label>
+            </div>
+          </div>
+          <div class="box_boton">
+            <button type="button" id="btn-restart">Reiniciar Medición</button>
+            <button type="button" id="btnPlay">Detener</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <script src="script_main.js"></script>
+  </body>
+</html>
