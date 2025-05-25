@@ -31,6 +31,7 @@
           <canvas class="scene" width="600" height="440" id="canvas"></canvas>
         </main>
         <div class="equation_container">
+          <div id="eqTitulo" class="equation" style="font-weight:bold; font-size:1.1em;"></div>
           <div class="equation" id="eqPos">
             x(t) = Asen(&omega;t + &phi;) [m]
           </div>
@@ -44,7 +45,7 @@
       </div>
       <div class="main_right">
         <aside class="options">
-          <div class="options-title">Opciones</div> <!-- Título añadido -->
+          <div class="options-title">Opciones</div>
           <div class="form">
             <div class="label_first">
               <label>
@@ -80,6 +81,20 @@
                 />
                 Mostrar Equilibrio
               </label>
+              <div class="enlinea">
+                <label for="amortiguamiento">Amortiguamiento [kg/s]:</label>
+                <input
+                  type="range"
+                  id="amortiguamiento"
+                  min="0"
+                  max="50"
+                  step="0.01"
+                  value="0"
+                  style="width: 120px;"
+                />
+                <span id="amortiguamiento_val">0.00 kg/s</span>
+              </div>
+              <button type="button" id="btnCritico" style="margin-left:8px;">Amortiguamiento Crítico</button>
             </div>
           </div>
           <div class="box_boton">
@@ -88,7 +103,7 @@
           </div>
         </aside>
         <aside class="options opt-graficas">
-          <div class="graficas-title">Gráficas</div> <!-- Título añadido -->
+          <div class="graficas-title">Gráficas</div>
           <div class="grafica-btns">
             <button class="btn-grafica" id="btnGrafPos">Posición</button>
             <button class="btn-grafica" id="btnGrafVel">Velocidad</button>
@@ -103,7 +118,6 @@
         </aside>
       </div>
     </div>
-    <!-- Agrega Chart.js antes de tu script principal -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script_main.js"></script>
   </body>

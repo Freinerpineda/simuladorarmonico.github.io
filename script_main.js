@@ -10,6 +10,12 @@ $masaInput.value = 600;
 // Entrada de constante del resorte
 let $constResorte = document.querySelector("#resorte_const");
 $constResorte.value = 50;
+// Entrada de amortiguamiento
+let $amortInput = document.querySelector("#amortiguamiento");
+let $amortVal = document.querySelector("#amortiguamiento_val");
+$amortVal.textContent = parseFloat($amortInput.value).toFixed(2);
+let b = parseFloat($amortInput.value);
+
 // Botón para iniciar/detener la animación
 let $playBt = document.querySelector("#btnPlay");
 // Botón para reiniciar
@@ -22,6 +28,7 @@ let mostrarEquilibrio = $checkboxEquilibrio.checked;
 let $divEcuPos = document.querySelector("#eqPos");
 let $divEcuVel = document.querySelector("#eqVelo");
 let $divEcuAce = document.querySelector("#eqAce");
+let $divEcuTitulo = document.querySelector("#eqTitulo");
 
 function restaurarEcua() {
   $divEcuPos.innerHTML = "x(t) = Asen(&omega;t + &phi;) [m]";
@@ -31,18 +38,48 @@ function restaurarEcua() {
 }
 
 function actualizarEcua() {
-  let samplitude = Math.round(amplitudeMeters * 1000) / 1000;
-  let somega = Math.round(omega * 1000) / 1000;
-  let coe2 = Math.round(amplitudeMeters * omega * 1000) / 1000;
-  let coe3 = Math.round(amplitudeMeters * omega * omega * 1000) / 1000;
-  let sphase = phase >= 0 ? "+ " : "- ";
-  sphase +=
-    Math.abs(phase) === Math.PI / 2
-      ? "<sup>1</sup>/<sub>2</sub>&pi;"
-      : (Math.abs(phase) / Math.PI).toFixed(2) + "&pi;";
-  $divEcuPos.innerHTML = `x(t) = ${samplitude}sen(${somega}t ${sphase}) [m]`;
-  $divEcuVel.innerHTML = `v(t) = ${coe2}cos(${somega}t ${sphase}) [m/s]`;
-  $divEcuAce.innerHTML = `a(t) = -${coe3}sen(${somega}t ${sphase}) [m/s<sup>2</sup>]`;
+  let m = parseFloat($masaInput.value) / 1000;
+  let k = parseFloat($constResorte.value);
+  b = parseFloat($amortInput.value);
+  let w0 = Math.sqrt(k / m);
+  let gamma = b / (2 * m);
+  let A = amplitudeMeters.toFixed(3);
+  let phi = phase.toFixed(3);
+
+  // Redondeo a 2 decimales para comparar amortiguamiento crítico
+  let gamma2 = Number(gamma.toFixed(2));
+  let w02 = Number(w0.toFixed(2));
+
+  if (gamma2 < w02 && b > 0) {
+    // Subamortiguado
+    let wd = Math.sqrt(w0 * w0 - gamma * gamma);
+    $divEcuTitulo.innerHTML = "Oscilación Amortiguada (Subamortiguada)";
+    $divEcuPos.innerHTML = `x(t) = ${A}·e<sup>-${gamma.toFixed(3)}·t</sup>·sen(${wd.toFixed(3)}·t + ${phi}) [m]`;
+    $divEcuVel.innerHTML = `v(t) = ${A}·e<sup>-${gamma.toFixed(3)}·t</sup>·[${wd.toFixed(3)}·cos(${wd.toFixed(3)}·t + ${phi}) - ${gamma.toFixed(3)}·sen(${wd.toFixed(3)}·t + ${phi})] [m/s]`;
+    $divEcuAce.innerHTML = `a(t) = ${A}·e<sup>-${gamma.toFixed(3)}·t</sup>·[ -${(wd*wd).toFixed(3)}·sen(${wd.toFixed(3)}·t + ${phi}) - 2·${gamma.toFixed(3)}·${wd.toFixed(3)}·cos(${wd.toFixed(3)}·t + ${phi}) + ${(gamma*gamma).toFixed(3)}·sen(${wd.toFixed(3)}·t + ${phi}) ] [m/s<sup>2</sup>]`;
+  } else if (Math.abs(gamma2 - w02) < 0.01 && b > 0) {
+    // Amortiguamiento crítico (comparación con redondeo a 2 decimales)
+    $divEcuTitulo.innerHTML = "Oscilación Amortiguada (Crítica)";
+    $divEcuPos.innerHTML = `x(t) = (${A} + ${A}·t)·e<sup>-${gamma.toFixed(3)}·t</sup> [m]`;
+    $divEcuVel.innerHTML = `v(t) = -${A}·${gamma.toFixed(3)}·e<sup>-${gamma.toFixed(3)}·t</sup> + ${A}·e<sup>-${gamma.toFixed(3)}·t</sup> - ${A}·${gamma.toFixed(3)}·t·e<sup>-${gamma.toFixed(3)}·t</sup> [m/s]`;
+    $divEcuAce.innerHTML = `a(t) = ... [m/s<sup>2</sup>]`;
+  } else if (b > 0) {
+    // Sobreamortiguado
+    let r1 = -gamma + Math.sqrt(gamma * gamma - w0 * w0);
+    let r2 = -gamma - Math.sqrt(gamma * gamma - w0 * w0);
+    let C1 = (A/2).toFixed(3);
+    let C2 = (A/2).toFixed(3);
+    $divEcuTitulo.innerHTML = "Oscilación Amortiguada (Sobreamortiguada)";
+    $divEcuPos.innerHTML = `x(t) = ${C1}·e<sup>${r1.toFixed(3)}·t</sup> + ${C2}·e<sup>${r2.toFixed(3)}·t</sup> [m]`;
+    $divEcuVel.innerHTML = `v(t) = ${C1}·${r1.toFixed(3)}·e<sup>${r1.toFixed(3)}·t</sup> + ${C2}·${r2.toFixed(3)}·e<sup>${r2.toFixed(3)}·t</sup> [m/s]`;
+    $divEcuAce.innerHTML = `a(t) = ${C1}·${(r1*r1).toFixed(3)}·e<sup>${r1.toFixed(3)}·t</sup> + ${C2}·${(r2*r2).toFixed(3)}·e<sup>${r2.toFixed(3)}·t</sup> [m/s<sup>2</sup>]`;
+  } else {
+    // No amortiguado (MAS)
+    $divEcuTitulo.innerHTML = "Oscilación No Amortiguada (MAS)";
+    $divEcuPos.innerHTML = `x(t) = ${A}·sen(${w0.toFixed(3)}·t + ${phi}) [m]`;
+    $divEcuVel.innerHTML = `v(t) = ${A}·${w0.toFixed(3)}·cos(${w0.toFixed(3)}·t + ${phi}) [m/s]`;
+    $divEcuAce.innerHTML = `a(t) = -${A}·${(w0*w0).toFixed(3)}·sen(${w0.toFixed(3)}·t + ${phi}) [m/s<sup>2</sup>]`;
+  }
 }
 
 // Variables de control
@@ -99,18 +136,18 @@ $checkboxEquilibrio.addEventListener("change", function () {
 });
 
 function dibujarSuelo() {
-  ctx.fillStyle = "#8B4513"; // Color marrón para el suelo
-  ctx.fillRect(0, canvas.height / 2 + heightMasa / 2 + 60, canvas.width, 10); // Suelo
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(0, canvas.height / 2 + heightMasa / 2 + 60, canvas.width, 10);
 }
 
 function drawSpring(x1, y1, x2, y2, coils = 10) {
-  const spacing = (x2 - x1) / (coils * 2); // Espaciado entre las bobinas
-  const amplitude = 10; // Amplitud de la onda (ajustable)
+  const spacing = (x2 - x1) / (coils * 2);
+  const amplitude = 10;
 
   ctx.beginPath();
   for (let i = 0; i <= coils * 2; i++) {
     const x = x1 + i * spacing;
-    const y = y1 + (i % 2 === 0 ? amplitude : -amplitude); // Alterna arriba y abajo
+    const y = y1 + (i % 2 === 0 ? amplitude : -amplitude);
 
     if (i === 0) {
       ctx.moveTo(x, y);
@@ -129,16 +166,16 @@ function dibujarEquilibrio() {
   const equilibriumX = canvas.width / 2 + 40;
   ctx.moveTo(
     equilibriumX,
-    canvas.height / 2 - heightMasa / 2 + 20 // Punto de inicio (fijo)
+    canvas.height / 2 - heightMasa / 2 + 20
   );
   ctx.lineTo(
     equilibriumX,
-    canvas.height / 2 + heightMasa / 2 + 100 // Punto final (fijo)
+    canvas.height / 2 + heightMasa / 2 + 100
   );
   ctx.strokeStyle = "grey";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.setLineDash([]); // Limpiar el estilo de línea punteada
+  ctx.setLineDash([]);
 }
 
 function massToPixel(masa) {
@@ -146,22 +183,20 @@ function massToPixel(masa) {
 }
 
 function dibujarRegla() {
-  const reglaY = canvas.height / 2 + heightMasa / 2 + 70; // Posición vertical de la regla
-  const equilibriumX = canvas.width / 2 + 40; // Posición X del punto de equilibrio
-  const numDivisiones = 10; // Número de divisiones positivas y negativas
-  const divisionLength = 10; // Longitud de las marcas pequeñas
-  const longDivisionLength = 15; // Longitud de las marcas largas
+  const reglaY = canvas.height / 2 + heightMasa / 2 + 70;
+  const equilibriumX = canvas.width / 2 + 40;
+  const numDivisiones = 10;
+  const divisionLength = 10;
+  const longDivisionLength = 15;
 
   ctx.strokeStyle = "black";
   ctx.lineWidth = 1;
   ctx.beginPath();
 
-  // Dibujar línea base de la regla
   ctx.moveTo(equilibriumX - numDivisiones * escalaPixelsPorMetro, reglaY);
   ctx.lineTo(equilibriumX + numDivisiones * escalaPixelsPorMetro, reglaY);
   ctx.stroke();
 
-  // Dibujar divisiones y etiquetas
   for (let i = -numDivisiones; i <= numDivisiones; i++) {
     const x = equilibriumX + i * escalaPixelsPorMetro;
     ctx.beginPath();
@@ -169,7 +204,6 @@ function dibujarRegla() {
     ctx.lineTo(x, reglaY + (i % 1 === 0 ? longDivisionLength : divisionLength));
     ctx.stroke();
 
-    // Agregar etiquetas cada 1 metro
     if (i % 1 === 0) {
       ctx.font = "12px Arial";
       ctx.fillStyle = "black";
@@ -180,10 +214,8 @@ function dibujarRegla() {
 }
 
 function dibujarEscena() {
-  // Limpiar el canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Dibujar el cuadrado en la posición actual
   ctx.fillStyle = "black";
   ctx.fillRect(
     posx + canvas.width / 2 - widthMasa / 2 + 40,
@@ -192,30 +224,24 @@ function dibujarEscena() {
     heightMasa
   );
 
-  // Dibujar el resorte
   const springStartX = 0;
   const springEndX = posx + canvas.width / 2 + 40 - widthMasa / 2;
   const springY = canvas.height / 2 + 60;
   drawSpring(springStartX, springY, springEndX, springY);
 
-  // Dibujar Suelo
   dibujarSuelo();
 
-  // Dibujar Punto de equilibrio si está seleccionado
   if (mostrarEquilibrio) {
     dibujarEquilibrio();
   }
 
-  // Dibujar la regla métrica
   dibujarRegla();
 
-  // Dibujar el cronómetro en la esquina superior derecha
   ctx.font = "20px Arial";
   ctx.fillStyle = "black";
   ctx.textAlign = "right";
   ctx.fillText(`Tiempo: ${elapsedTime.toFixed(2)} s`, canvas.width - 10, 30);
 
-  // Mostrar posición actual al arrastrar en la esquina inferior izquierda
   if (isDragging) {
     ctx.font = "16px Arial";
     ctx.fillStyle = "black";
@@ -237,30 +263,59 @@ function pixelesAMetros(pixeles) {
 }
 
 function animate(timestamp) {
-  if (!startTime) {
-    startTime = timestamp;
-  } // Marcar el inicio
+  if (!startTime) startTime = timestamp;
+  elapsedTime = (timestamp - startTime) / 1000;
 
-  elapsedTime = (timestamp - startTime) / 1000; // Calcular tiempo transcurrido
+  let m = parseFloat($masaInput.value) / 1000;
+  let k = parseFloat($constResorte.value);
+  b = parseFloat($amortInput.value);
 
-  posxMeters = amplitudeMeters * Math.sin(omega * elapsedTime + phase);
+  let w0 = Math.sqrt(k / m);
+  let gamma = b / (2 * m);
+
+  let underdamped = gamma < w0 && b > 0;
+  let pos, vel, ace;
+
+  if (underdamped) {
+    let wd = Math.sqrt(w0 * w0 - gamma * gamma);
+    pos = amplitudeMeters * Math.exp(-gamma * elapsedTime) * Math.sin(wd * elapsedTime + phase);
+    vel = amplitudeMeters * Math.exp(-gamma * elapsedTime) *
+      (wd * Math.cos(wd * elapsedTime + phase) - gamma * Math.sin(wd * elapsedTime + phase));
+    ace = amplitudeMeters * Math.exp(-gamma * elapsedTime) *
+      (-wd * wd * Math.sin(wd * elapsedTime + phase) - 2 * gamma * wd * Math.cos(wd * elapsedTime + phase) + gamma * gamma * Math.sin(wd * elapsedTime + phase));
+  } else if (b > 0 && gamma >= w0) {
+    let r1 = -gamma + Math.sqrt(gamma * gamma - w0 * w0);
+    let r2 = -gamma - Math.sqrt(gamma * gamma - w0 * w0);
+    let C1 = amplitudeMeters / 2;
+    let C2 = amplitudeMeters / 2;
+    pos = C1 * Math.exp(r1 * elapsedTime) + C2 * Math.exp(r2 * elapsedTime);
+    vel = C1 * r1 * Math.exp(r1 * elapsedTime) + C2 * r2 * Math.exp(r2 * elapsedTime);
+    ace = C1 * r1 * r1 * Math.exp(r1 * elapsedTime) + C2 * r2 * r2 * Math.exp(r2 * elapsedTime);
+  } else {
+    pos = amplitudeMeters * Math.sin(w0 * elapsedTime + phase);
+    vel = amplitudeMeters * w0 * Math.cos(w0 * elapsedTime + phase);
+    ace = -amplitudeMeters * w0 * w0 * Math.sin(w0 * elapsedTime + phase);
+  }
+
+  posxMeters = pos;
   posx = metrosAPixeles(posxMeters);
+  velocity = vel;
+  acceleration = ace;
 
-  // Calcular velocidad
-  velocity = amplitudeMeters * omega * Math.cos(omega * elapsedTime + phase);
+  // Detener simulación si la posición es 0 (redondeada a 5 cifras)
+  if (Number(posxMeters.toFixed(5)) === 0) {
+    isAnimating = false;
+    $playBt.textContent = "Continuar";
+    possibleDragging = true;
+    return;
+  }
 
-  // Calcular aceleración
-  acceleration =
-    -amplitudeMeters * omega * omega * Math.sin(omega * elapsedTime + phase);
-
-  // Calcular energías
-  let masaKg = parseFloat($masaInput.value) / 1000;
+  let masaKg = m;
   let energiaCinetica = 0.5 * masaKg * velocity * velocity;
-  let energiaPotencial = 0.5 * parseFloat($constResorte.value) * posxMeters * posxMeters;
+  let energiaPotencial = 0.5 * k * posxMeters * posxMeters;
 
-  // Guardar datos para la gráfica
   if (isAnimating) {
-    if (datosGrafica.tiempo.length > 500) { // Limita la cantidad de puntos
+    if (datosGrafica.tiempo.length > 500) {
       datosGrafica.tiempo.shift();
       datosGrafica.posicion.shift();
       datosGrafica.velocidad.shift();
@@ -275,7 +330,6 @@ function animate(timestamp) {
     datosGrafica.energiaCinetica.push(energiaCinetica);
     datosGrafica.energiaPotencial.push(energiaPotencial);
 
-    // Actualizar la gráfica en tiempo real si hay una activa
     if (chart && tipoGraficaActiva) {
       chart.data.labels = datosGrafica.tiempo;
       if (tipoGraficaActiva === "posicion") {
@@ -289,21 +343,16 @@ function animate(timestamp) {
       } else if (tipoGraficaActiva === "energiaPotencial") {
         chart.data.datasets[0].data = datosGrafica.energiaPotencial;
       }
-      if (chart.data.datasets[0].data && chart.data.labels) {
-        chart.update("none");
-      }
+      chart.update();
     }
   }
 
-  // Dibujar la escena
   dibujarEscena();
 
-  // Mostrar información
   $pos.innerHTML = `x = ${posxMeters.toFixed(3)} m`;
   $vel.innerHTML = `v = ${velocity.toFixed(3)} m/s`;
   $ace.innerHTML = `a = ${acceleration.toFixed(3)} m/s<sup>2</sup>`;
 
-  // Continuar la animación solo si está activa
   if (isAnimating) {
     animationId = requestAnimationFrame(animate);
   }
@@ -311,11 +360,9 @@ function animate(timestamp) {
 
 // EVENTOS
 
-let offsetXFromMass = 0; // Diferencia entre la posición del mouse y la masa en píxeles
+let offsetXFromMass = 0;
 
-// Eventos de mouse
 canvas.addEventListener("mousedown", function (event) {
-  // Comprobar si el mouse está sobre la masa
   const rect = canvas.getBoundingClientRect();
   const offsetX = event.clientX - rect.left;
   const offsetY = event.clientY - rect.top;
@@ -330,113 +377,19 @@ canvas.addEventListener("mousedown", function (event) {
     offsetY <= masaY + heightMasa &&
     possibleDragging
   ) {
-    isDragging = true; // Iniciar el arrastre
-
-    // Calcular la diferencia entre el clic y la posición actual de la masa
+    isDragging = true;
     offsetXFromMass = offsetX - masaX;
   }
 });
 
 canvas.addEventListener("mousemove", function (event) {
   if (isDragging) {
-    // Calcular la posición del mouse respecto al canvas
-    let mouseXCurrent = event.clientX - canvas.getBoundingClientRect().left; // Ajustar coordenadas del mouse respecto al canvas
-    let equilibriumX = canvas.width / 2 + 40 - widthMasa / 2; // Posición del punto de equilibrio
-    let maxAmplitudePixels = amplitudeMaxMeters * escalaPixelsPorMetro; // Amplitud máxima en píxeles
-
-    // Calcular la nueva posición de la masa utilizando la diferencia
-    posx = mouseXCurrent - equilibriumX - offsetXFromMass;
-
-    // Limitar la posición de la masa para que no exceda la amplitud máxima
-    if (posx > maxAmplitudePixels) {
-      posx = maxAmplitudePixels; // Limitar a la amplitud máxima positiva
-    } else if (posx < -maxAmplitudePixels) {
-      posx = -maxAmplitudePixels; // Limitar a la amplitud máxima negativa
-    }
-
-    posxMeters = pixelesAMetros(posx);
-    amplitudeMeters = Math.abs(posxMeters); // Establecer la amplitud como la distancia desde el equilibrio
-
-    // Actualizar la escena
-    dibujarEscena();
-  }
-});
-
-canvas.addEventListener("mouseup", function () {
-  if (isDragging) {
-    isDragging = false; // Detener el arrastre
-    startTime = performance.now(); // Iniciar el tiempo al soltar la masa
-    isAnimating = true; // Iniciar la animación
-    possibleDragging = false;
-
-    // Establecer la fase y la velocidad al soltar
-    if (posxMeters > 0) {
-      phase = Math.PI / 2; // Ajustar la fase para x positivo con t = 0
-    } else {
-      phase = -Math.PI / 2; // Ajustar la fase para x negativo con t = 0
-    }
-
-    velocity = 0; // Velocidad inicial al soltar
-    actualizarEcua(); // Actualizar las ecuaciones con los nuevos valores
-    requestAnimationFrame(animate); // Comenzar la animación
-    $playBt.style.display = "block";
-    $playBt.textContent = "Detener"; // Cambiar el texto del botón
-  }
-});
-
-// Eventos táctiles
-canvas.addEventListener("touchstart", function (event) {
-  event.preventDefault(); // Prevenir el comportamiento predeterminado
-
-  const touch = event.changedTouches[0]; // Obtener el primer toque
-  const rect = canvas.getBoundingClientRect(); // Obtener el rectángulo del canvas
-
-  // Calcular factores de escala
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  // Calcular las coordenadas del toque con respecto al canvas
-  const touchX = (touch.clientX - rect.left) * scaleX;
-  const touchY = (touch.clientY - rect.top) * scaleY;
-
-  const masaX = posx + canvas.width / 2 - widthMasa / 2 + 40;
-  const masaY = canvas.height / 2 - heightMasa / 2 + 60;
-
-  // Comprobar si el toque está sobre la masa
-  if (
-    touchX >= masaX &&
-    touchX <= masaX + widthMasa &&
-    touchY >= masaY &&
-    touchY <= masaY + heightMasa &&
-    possibleDragging
-  ) {
-    isDragging = true; // Iniciar el arrastre
-
-    // Calcular la diferencia entre el toque y la posición actual de la masa
-    offsetXFromMass = touchX - masaX;
-  }
-});
-
-canvas.addEventListener("touchmove", function (event) {
-  if (isDragging) {
-    event.preventDefault(); // Prevenir el comportamiento predeterminado
-
-    const touch = event.changedTouches[0]; // Obtener el primer toque
-    const rect = canvas.getBoundingClientRect(); // Obtener el rectángulo del canvas
-
-    // Calcular factores de escala
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    // Calcular la posición del toque respecto al canvas
-    let touchXCurrent = (touch.clientX - rect.left) * scaleX;
+    let mouseXCurrent = event.clientX - canvas.getBoundingClientRect().left;
     let equilibriumX = canvas.width / 2 + 40 - widthMasa / 2;
     let maxAmplitudePixels = amplitudeMaxMeters * escalaPixelsPorMetro;
 
-    // Calcular la nueva posición de la masa utilizando la diferencia
-    posx = touchXCurrent - equilibriumX - offsetXFromMass;
+    posx = mouseXCurrent - equilibriumX - offsetXFromMass;
 
-    // Limitar la posición de la masa para que no exceda la amplitud máxima
     if (posx > maxAmplitudePixels) {
       posx = maxAmplitudePixels;
     } else if (posx < -maxAmplitudePixels) {
@@ -446,30 +399,105 @@ canvas.addEventListener("touchmove", function (event) {
     posxMeters = pixelesAMetros(posx);
     amplitudeMeters = Math.abs(posxMeters);
 
-    // Actualizar la escena
     dibujarEscena();
   }
 });
 
-canvas.addEventListener("touchend", function () {
+canvas.addEventListener("mouseup", function () {
   if (isDragging) {
-    isDragging = false; // Detener el arrastre
-    startTime = performance.now(); // Iniciar el tiempo al soltar la masa
-    isAnimating = true; // Iniciar la animación
+    isDragging = false;
+    startTime = performance.now();
+    isAnimating = true;
     possibleDragging = false;
 
-    // Establecer la fase y la velocidad al soltar
     if (posxMeters > 0) {
       phase = Math.PI / 2;
     } else {
       phase = -Math.PI / 2;
     }
 
-    velocity = 0; // Velocidad inicial al soltar
-    actualizarEcua(); // Actualizar las ecuaciones con los nuevos valores
-    requestAnimationFrame(animate); // Comenzar la animación
+    velocity = 0;
+    actualizarEcua();
+    requestAnimationFrame(animate);
     $playBt.style.display = "block";
-    $playBt.textContent = "Detener"; // Cambiar el texto del botón
+    $playBt.textContent = "Detener";
+  }
+});
+
+canvas.addEventListener("touchstart", function (event) {
+  event.preventDefault();
+
+  const touch = event.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  const touchX = (touch.clientX - rect.left) * scaleX;
+  const touchY = (touch.clientY - rect.top) * scaleY;
+
+  const masaX = posx + canvas.width / 2 - widthMasa / 2 + 40;
+  const masaY = canvas.height / 2 - heightMasa / 2 + 60;
+
+  if (
+    touchX >= masaX &&
+    touchX <= masaX + widthMasa &&
+    touchY >= masaY &&
+    touchY <= masaY + heightMasa &&
+    possibleDragging
+  ) {
+    isDragging = true;
+    offsetXFromMass = touchX - masaX;
+  }
+});
+
+canvas.addEventListener("touchmove", function (event) {
+  if (isDragging) {
+    event.preventDefault();
+
+    const touch = event.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let touchXCurrent = (touch.clientX - rect.left) * scaleX;
+    let equilibriumX = canvas.width / 2 + 40 - widthMasa / 2;
+    let maxAmplitudePixels = amplitudeMaxMeters * escalaPixelsPorMetro;
+
+    posx = touchXCurrent - equilibriumX - offsetXFromMass;
+
+    if (posx > maxAmplitudePixels) {
+      posx = maxAmplitudePixels;
+    } else if (posx < -maxAmplitudePixels) {
+      posx = -maxAmplitudePixels;
+    }
+
+    posxMeters = pixelesAMetros(posx);
+    amplitudeMeters = Math.abs(posxMeters);
+
+    dibujarEscena();
+  }
+});
+
+canvas.addEventListener("touchend", function () {
+  if (isDragging) {
+    isDragging = false;
+    startTime = performance.now();
+    isAnimating = true;
+    possibleDragging = false;
+
+    if (posxMeters > 0) {
+      phase = Math.PI / 2;
+    } else {
+      phase = -Math.PI / 2;
+    }
+
+    velocity = 0;
+    actualizarEcua();
+    requestAnimationFrame(animate);
+    $playBt.style.display = "block";
+    $playBt.textContent = "Detener";
   }
 });
 
@@ -477,40 +505,36 @@ $masaInput.addEventListener("input", function () {
   let value = parseFloat($masaInput.value);
 
   if (value < 0.2 || value > 600) {
-    $masaInput.value = ""; // Limpiar el campo si el valor es inválido
+    $masaInput.value = "";
   } else {
     widthMasa = massToPixel($masaInput.value);
     heightMasa = massToPixel($masaInput.value);
 
-    // Recalcular omega y el período
     let resorteValue = parseFloat($constResorte.value);
     if (resorteValue) {
       let masa = parseFloat($masaInput.value) / 1000;
       omega = Math.sqrt(resorteValue / masa);
-      period = ((2 * Math.PI) / omega) * 1000;
     }
 
-    // Recalcular amplitud máxima
     amplitudeMaxMeters =
       (canvas.width / 2 - widthMasa / 2 - 42) / escalaPixelsPorMetro;
 
-    dibujarEscena(); // Redibujar la escena cuando cambie la masa
+    dibujarEscena();
     $playBt.style.display = "none";
-    isDragging = false; // Detener el arrastre
-    isAnimating = false; // Detener la animación
-    startTime = null; // Reiniciar el tiempo de inicio
-    timeSave = 0; // Reiniciar el tiempo guardado
-    elapsedTime = 0; // Reiniciar el tiempo transcurrido
-    posx = 0; // Posición inicial
+    isDragging = false;
+    isAnimating = false;
+    startTime = null;
+    timeSave = 0;
+    elapsedTime = 0;
+    posx = 0;
     posxMeters = 0;
-    velocity = 0; // Velocidad inicial
-    acceleration = 0; // Aceleración inicial
-    amplitudeMeters = 0; // Reiniciar la amplitud en metros
-    amplitude = 0; // Reiniciar la amplitud en píxeles
-    phase = 0; // Reiniciar la fase
+    velocity = 0;
+    acceleration = 0;
+    amplitudeMeters = 0;
+    amplitude = 0;
+    phase = 0;
     possibleDragging = true;
 
-    // Restablecer los valores mostrados
     $pos.innerHTML = `x = 0.000 m`;
     $vel.innerHTML = `v = 0.000 m/s`;
     $ace.innerHTML = `a = 0.000 m/s<sup>2</sup>`;
@@ -521,46 +545,50 @@ $constResorte.addEventListener("input", () => {
   let value = parseFloat($constResorte.value);
 
   if (value < 0.5 || value > 2500) {
-    $constResorte.value = ""; // Limpiar el campo si el valor es inválido
+    $constResorte.value = "";
   } else {
     let masa = parseFloat($masaInput.value) / 1000;
-    omega = Math.sqrt(value / masa); // Recalcular omega
+    omega = Math.sqrt(value / masa);
     period = ((2 * Math.PI) / omega) * 1000;
     $playBt.style.display = "none";
-    isDragging = false; // Detener el arrastre
-    isAnimating = false; // Detener la animación
-    startTime = null; // Reiniciar el tiempo de inicio
-    timeSave = 0; // Reiniciar el tiempo guardado
-    elapsedTime = 0; // Reiniciar el tiempo transcurrido
-    posx = 0; // Posición inicial
+    isDragging = false;
+    isAnimating = false;
+    startTime = null;
+    timeSave = 0;
+    elapsedTime = 0;
+    posx = 0;
     posxMeters = 0;
-    velocity = 0; // Velocidad inicial
-    acceleration = 0; // Aceleración inicial
-    amplitudeMeters = 0; // Reiniciar la amplitud en metros
-    amplitude = 0; // Reiniciar la amplitud en píxeles
-    phase = 0; // Reiniciar la fase
+    velocity = 0;
+    acceleration = 0;
+    amplitudeMeters = 0;
+    amplitude = 0;
+    phase = 0;
     possibleDragging = true;
 
-    // Restablecer los valores mostrados
     $pos.innerHTML = `x = 0.000 m`;
     $vel.innerHTML = `v = 0.000 m/s`;
     $ace.innerHTML = `a = 0.000 m/s<sup>2</sup>`;
   }
 });
 
+// Amortiguamiento: barra deslizante
+$amortInput.addEventListener("input", function () {
+  b = parseFloat($amortInput.value);
+  $amortVal.textContent = b.toFixed(2) + " kg/s";
+  actualizarEcua();
+});
+
 $playBt.addEventListener("click", function () {
   if (isAnimating) {
-    // Detener la animación
     cancelAnimationFrame(animationId);
-    timeSave = elapsedTime; // Guardar el tiempo transcurrido
+    timeSave = elapsedTime;
     isAnimating = false;
     $playBt.textContent = "Continuar";
-    possibleDragging = true; // <-- Permitir volver a arrastrar al pausar
+    possibleDragging = true;
   } else {
-    // Iniciar la animación desde el punto donde se detuvo
     isAnimating = true;
-    possibleDragging = false; // <-- No permitir arrastrar mientras anima
-    startTime = performance.now() - timeSave * 1000; // Ajustar startTime al tiempo acumulado
+    possibleDragging = false;
+    startTime = performance.now() - timeSave * 1000;
     requestAnimationFrame(animate);
     $playBt.textContent = "Detener";
   }
@@ -573,7 +601,6 @@ $btnRestart.addEventListener("click", () => {
 function resetSimulation() {
   restaurarEcua();
   $playBt.style.display = "none";
-  // Reiniciar todas las variables
   isDragging = false;
   isAnimating = false;
   startTime = null;
@@ -588,24 +615,22 @@ function resetSimulation() {
   phase = 0;
   possibleDragging = true;
 
-  // Reiniciar entradas de usuario
   $masaInput.value = 600;
   $constResorte.value = 50;
+  $amortInput.value = 0;
+  $amortVal.textContent = "0.00";
   $checkboxEquilibrio.checked = true;
   mostrarEquilibrio = true;
 
-  // Recalcular amplitud máxima
   widthMasa = massToPixel($masaInput.value);
   heightMasa = massToPixel($masaInput.value);
   amplitudeMaxMeters =
     (canvas.width / 2 - widthMasa / 2 - 42) / escalaPixelsPorMetro;
 
-  // Restablecer los valores mostrados
   $pos.innerHTML = `x = 0.000 m`;
   $vel.innerHTML = `v = 0.000 m/s`;
   $ace.innerHTML = `a = 0.000 m/s<sup>2</sup>`;
 
-  // <-- Corrige aquí: incluye todas las propiedades
   datosGrafica = {
     tiempo: [],
     posicion: [],
@@ -616,23 +641,20 @@ function resetSimulation() {
   };
   if (chart) {
     chart.destroy();
-    chart = null; // <-- IMPORTANTE: así no se intenta actualizar una gráfica destruida
+    chart = null;
   }
   if ($graficaAviso) $graficaAviso.style.display = "block";
 
-  // Quitar selección de botones de gráfica
   document.querySelectorAll('.btn-grafica').forEach(btn => {
     btn.classList.remove('btn-grafica-activa');
   });
 
-  dibujarEscena(); // Redibujar la escena para mostrar la posición inicial
+  dibujarEscena();
 }
 
-// Listeners para los nuevos botones
 document.getElementById("btnGrafEc").addEventListener("click", () => mostrarGrafica("energiaCinetica"));
 document.getElementById("btnGrafEp").addEventListener("click", () => mostrarGrafica("energiaPotencial"));
 
-// ya existen estos:
 $btnGrafPos.addEventListener("click", () => mostrarGrafica("posicion"));
 $btnGrafVel.addEventListener("click", () => mostrarGrafica("velocidad"));
 $btnGrafAce.addEventListener("click", () => mostrarGrafica("aceleracion"));
@@ -640,11 +662,9 @@ $btnGrafAce.addEventListener("click", () => mostrarGrafica("aceleracion"));
 function mostrarGrafica(tipo) {
   tipoGraficaActiva = tipo;
 
-  // Quitar la clase activa de todos los botones
   document.querySelectorAll('.btn-grafica').forEach(btn => {
     btn.classList.remove('btn-grafica-activa');
   });
-  // Agregar la clase activa al botón correspondiente
   if (tipo === "posicion") {
     $btnGrafPos.classList.add('btn-grafica-activa');
   } else if (tipo === "velocidad") {
@@ -720,3 +740,17 @@ function crearGrafica(tipo) {
 if ($graficaAviso) $graficaAviso.style.display = "block";
 if (chart) chart.destroy();
 dibujarEscena();
+
+let $btnCritico = document.querySelector("#btnCritico");
+
+if ($btnCritico) {
+  $btnCritico.addEventListener("click", function () {
+    let m = parseFloat($masaInput.value) / 1000;
+    let k = parseFloat($constResorte.value);
+    // b_critico = 2 * sqrt(k * m)
+    let bCritico = 2 * Math.sqrt(k * m);
+    $amortInput.value = bCritico.toFixed(2);
+    $amortVal.textContent = bCritico.toFixed(2) + " kg/s";
+    actualizarEcua();
+  });
+}
